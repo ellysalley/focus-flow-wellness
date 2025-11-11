@@ -20,6 +20,7 @@ interface Challenge {
   duration: string;
   xp: number;
   completed: boolean;
+  started: boolean;
 }
 
 interface Badge {
@@ -120,6 +121,7 @@ const Dashboard = () => {
         duration: c.duration,
         xp: c.xp,
         completed: completedIds.has(c.id),
+        started: false,
       }));
 
       setChallenges(formattedChallenges);
@@ -164,13 +166,28 @@ const Dashboard = () => {
 
   const handleStartChallenge = async (id: number) => {
     const challenge = challenges.find(c => c.id === id);
-    
-    if (challenge?.completed) return;
-    
-    setChallenges(challenges.map(c => 
-      c.id === id ? { ...c, completed: true } : c
+
+    if (challenge?.completed || challenge?.started) return;
+
+    setChallenges(challenges.map(c =>
+      c.id === id ? { ...c, started: true } : c
     ));
-    
+
+    toast({
+      title: "Challenge Started! 💪",
+      description: `Good luck with ${challenge?.title}! Click "Complete Challenge" when you're done.`,
+    });
+  };
+
+  const handleCompleteChallenge = async (id: number) => {
+    const challenge = challenges.find(c => c.id === id);
+
+    if (challenge?.completed || !challenge?.started) return;
+
+    setChallenges(challenges.map(c =>
+      c.id === id ? { ...c, completed: true, started: false } : c
+    ));
+
     if (challenge) {
       const xpEarned = challenge.xp * xpMultiplier;
       const pointsEarned = xpEarned; // 1:1 ratio with XP
@@ -181,7 +198,7 @@ const Dashboard = () => {
 
       // Award points along with XP
       await addPoints(pointsEarned);
-      
+
       // Save to database
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -198,7 +215,7 @@ const Dashboard = () => {
       } catch (error) {
         console.error("Error saving challenge:", error);
       }
-      
+
       let toastDescription = `+${xpEarned} XP and +${pointsEarned} points earned!`;
       if (xpMultiplier > 1) {
         toastDescription += ` (${xpMultiplier}x XP Boost active!)`;
@@ -208,7 +225,7 @@ const Dashboard = () => {
         title: "Challenge Completed! 🎉",
         description: toastDescription,
       });
-      
+
       if (leveledUp) {
         setTimeout(() => {
           toast({
@@ -327,6 +344,7 @@ const Dashboard = () => {
                 key={challenge.id}
                 {...challenge}
                 onStart={() => handleStartChallenge(challenge.id)}
+                onComplete={() => handleCompleteChallenge(challenge.id)}
               />
             ))}
           </div>

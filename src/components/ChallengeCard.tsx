@@ -11,7 +11,9 @@ interface ChallengeCardProps {
   duration: string;
   xp: number;
   completed?: boolean;
+  started?: boolean;
   onStart?: () => void;
+  onComplete?: () => void;
 }
 
 const ChallengeCard = ({
@@ -21,7 +23,9 @@ const ChallengeCard = ({
   duration,
   xp,
   completed = false,
+  started = false,
   onStart,
+  onComplete,
 }: ChallengeCardProps) => {
   return (
     <Card
@@ -29,6 +33,8 @@ const ChallengeCard = ({
         "p-6 border-2 transition-all hover:shadow-md",
         completed
           ? "border-accent bg-success-light"
+          : started
+          ? "border-primary bg-primary/5"
           : "border-border bg-card"
       )}
     >
@@ -36,7 +42,7 @@ const ChallengeCard = ({
         <div
           className={cn(
             "p-3 rounded-full",
-            completed ? "bg-accent" : "bg-primary"
+            completed ? "bg-accent" : started ? "bg-primary" : "bg-primary"
           )}
         >
           <Icon className="h-6 w-6 text-primary-foreground" />
@@ -61,9 +67,15 @@ const ChallengeCard = ({
           </span>
         </div>
         
-        {!completed && (
+        {!completed && !started && (
           <Button onClick={onStart} className="bg-primary hover:bg-primary/90">
             Start Challenge
+          </Button>
+        )}
+
+        {!completed && started && (
+          <Button onClick={onComplete} className="bg-accent hover:bg-accent/90">
+            Complete Challenge
           </Button>
         )}
       </div>
