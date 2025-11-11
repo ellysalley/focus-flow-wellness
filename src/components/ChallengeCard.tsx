@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ChallengeTimer from "./ChallengeTimer";
 
 interface ChallengeCardProps {
   icon: LucideIcon;
@@ -79,6 +80,12 @@ const ChallengeCard = ({
           </Button>
         )}
       </div>
+
+      <ChallengeTimer
+        duration={duration}
+        onComplete={onComplete || (() => {})}
+        isStarted={started}
+      />
     </Card>
   );
 };

@@ -175,7 +175,7 @@ const Dashboard = () => {
 
     toast({
       title: "Challenge Started! 💪",
-      description: `Good luck with ${challenge?.title}! Click "Complete Challenge" when you're done.`,
+      description: `Timer started for ${challenge?.title}! It will auto-complete when time's up.`,
     });
   };
 
