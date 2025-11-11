@@ -1,0 +1,4 @@
+project_id = "gefidpiopuakmldlkbxd"
+
+[functions.wellness-coach]
+verify_jwt = false
