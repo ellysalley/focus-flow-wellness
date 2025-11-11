@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Send, Loader2 } from "lucide-react";
+import { Sparkles, Send, Loader2, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -156,17 +156,59 @@ const Companion = () => {
     sendMessageToAI(userMessage);
   };
 
+  const clearConversation = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setMessages([]);
+      setConversationStarted(false);
+
+      toast({
+        title: "Conversation Cleared",
+        description: "Your chat history has been deleted.",
+      });
+    } catch (error) {
+      console.error('Error clearing conversation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear conversation history.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-28">
       <div className="container max-w-4xl mx-auto px-4 py-8 h-[calc(100vh-7rem)] flex flex-col">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
-            Your AI Companion
-          </h1>
-          <p className="text-muted-foreground">
-            Your supportive wellness coach is here to help
-          </p>
+        <div className="mb-6 flex justify-between items-start">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
+              Your AI Companion
+            </h1>
+            <p className="text-muted-foreground">
+              Your supportive wellness coach is here to help
+            </p>
+          </div>
+          {conversationStarted && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearConversation}
+              className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear History
+            </Button>
+          )}
         </div>
 
         {/* Daily Check-in Card */}
