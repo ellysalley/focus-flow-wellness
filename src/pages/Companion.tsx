@@ -87,7 +87,6 @@ const Companion = () => {
   }, [messages]);
 
   const startConversation = async () => {
-    setConversationStarted(true);
     const welcomeMessage: Message = {
       id: 1,
       text: "Great job staying on track! You're building amazing habits. Remember, every small step counts toward your wellness journey. Ready to tackle your next challenge?",
@@ -96,31 +95,41 @@ const Companion = () => {
     };
     setMessages([welcomeMessage]);
     await saveMessage(welcomeMessage.text, "ai");
+    setConversationStarted(true);
   };
 
-  const sendMessageToAI = async (userMessage: Message) => {
+  const sendMessageToAI = async (userMessage: Message, currentMessages: Message[]) => {
     setIsLoading(true);
-    
+
     try {
-      const conversationHistory = [...messages, userMessage].map(msg => ({
+      const conversationHistory = currentMessages.map(msg => ({
         role: msg.sender === "user" ? "user" : "assistant",
         content: msg.text
       }));
+
+      console.log("Sending to AI:", conversationHistory);
 
       const { data, error } = await supabase.functions.invoke("wellness-coach", {
         body: { messages: conversationHistory },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase function error:", error);
+        if (error.message?.includes("429") || error.message?.includes("Rate limit")) {
+          throw new Error("Too many requests. Please wait a moment and try again.");
+        }
+        throw error;
+      }
 
       if (data?.error) {
+        console.error("AI response error:", data.error);
         throw new Error(data.error);
       }
 
       const aiResponse = data.choices[0].message.content;
-      
+
       const aiMessage: Message = {
-        id: messages.length + 2,
+        id: currentMessages.length + 1,
         text: aiResponse,
         sender: "ai",
         timestamp: new Date(),
@@ -128,11 +137,12 @@ const Companion = () => {
 
       setMessages((prev) => [...prev, aiMessage]);
       await saveMessage(aiResponse, "ai");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error calling AI:", error);
+      const errorMessage = error?.message || "I'm having trouble responding right now. Please try again.";
       toast({
         title: "Connection Error",
-        description: "I'm having trouble responding right now. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -150,10 +160,13 @@ const Companion = () => {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInputValue("");
     await saveMessage(inputValue, "user");
-    sendMessageToAI(userMessage);
+
+    // Pass the updated messages array to ensure we have the latest state
+    sendMessageToAI(userMessage, updatedMessages);
   };
 
   const clearConversation = async () => {
