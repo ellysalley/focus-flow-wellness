@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, LogOut, Mail, Calendar, Award, Zap } from "lucide-react";
+import { User, LogOut, Mail, Calendar, Award, Zap, Scale } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -133,14 +133,24 @@ const Profile = () => {
         {/* Actions */}
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-foreground mb-4">Account Actions</h3>
-          <Button
-            onClick={handleLogout}
-            variant="destructive"
-            className="w-full"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Log Out
-          </Button>
+          <div className="space-y-3">
+            <Button
+              onClick={() => navigate("/body-metrics")}
+              variant="default"
+              className="w-full"
+            >
+              <Scale className="h-4 w-4 mr-2" />
+              Enter Body Metrics
+            </Button>
+            <Button
+              onClick={handleLogout}
+              variant="destructive"
+              className="w-full"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Log Out
+            </Button>
+          </div>
         </Card>
       </div>
 

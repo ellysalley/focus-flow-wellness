@@ -71,6 +71,36 @@ export type Database = {
         }
         Relationships: []
       }
+      body_metrics: {
+        Row: {
+          id: string
+          user_id: string
+          weight_pounds: number
+          height_inches: number
+          bmi: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          weight_pounds: number
+          height_inches: number
+          bmi?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          weight_pounds?: number
+          height_inches?: number
+          bmi?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       challenges: {
         Row: {
           created_at: string

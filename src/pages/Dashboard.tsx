@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Flame, Sparkles, Trophy, Target, Clock, Brain, Droplet, Apple, LucideIcon } from "lucide-react";
+import { Flame, Sparkles, Trophy, Target, Clock, Brain, Droplet, Apple, Scale, AlertCircle, LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import StatCard from "@/components/StatCard";
 import ProgressBar from "@/components/ProgressBar";
 import ChallengeCard from "@/components/ChallengeCard";
@@ -50,6 +51,8 @@ const Dashboard = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [activeRewards, setActiveRewards] = useState<any[]>([]);
   const [xpMultiplier, setXpMultiplier] = useState(1);
+  const [bodyMetrics, setBodyMetrics] = useState<{ bmi: number; weight_pounds: number; height_inches: number } | null | undefined>(undefined);
+  const [bmiSuggestedChallenges, setBmiSuggestedChallenges] = useState<Challenge[]>([]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -58,7 +61,7 @@ const Dashboard = () => {
         navigate("/auth");
       } else {
         await Promise.all([
-          loadChallenges(user.id),
+          loadBodyMetrics(user.id),
           loadEarnedBadges(user.id),
           loadActiveRewards(user.id),
         ]);
@@ -66,6 +69,49 @@ const Dashboard = () => {
     };
     checkAuth();
   }, [navigate]);
+
+  // Load challenges after bodyMetrics is loaded (or determined to be null)
+  useEffect(() => {
+    const loadChallengesWithBMI = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await loadChallenges(user.id);
+      }
+    };
+    // Only load if we've attempted to load body metrics (to avoid double loading)
+    if (bodyMetrics !== undefined) {
+      loadChallengesWithBMI();
+    }
+  }, [bodyMetrics]);
+
+  const loadBodyMetrics = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("body_metrics")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        throw error;
+      }
+
+      if (data) {
+        setBodyMetrics({
+          bmi: data.bmi || 0,
+          weight_pounds: data.weight_pounds,
+          height_inches: data.height_inches,
+        });
+      } else {
+        setBodyMetrics(null);
+      }
+    } catch (error: any) {
+      console.error("Error loading body metrics:", error);
+      setBodyMetrics(null);
+    }
+  };
 
   const loadActiveRewards = async (userId: string) => {
     try {
@@ -91,12 +137,11 @@ const Dashboard = () => {
 
   const loadChallenges = async (userId: string) => {
     try {
-      // Load available challenges
+      // Load all available challenges
       const { data: challengesData, error: challengesError } = await supabase
         .from("challenges")
         .select("*")
-        .eq("is_active", true)
-        .limit(5);
+        .eq("is_active", true);
 
       if (challengesError) throw challengesError;
 
@@ -124,7 +169,70 @@ const Dashboard = () => {
         started: false,
       }));
 
-      setChallenges(formattedChallenges);
+      // Get body metrics if not already loaded
+      let currentBodyMetrics = bodyMetrics;
+      if (!currentBodyMetrics) {
+        const { data: metricsData } = await supabase
+          .from("body_metrics")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (metricsData) {
+          currentBodyMetrics = {
+            bmi: metricsData.bmi || 0,
+            weight_pounds: metricsData.weight_pounds,
+            height_inches: metricsData.height_inches,
+          };
+        }
+      }
+
+      // Filter challenges based on BMI if available
+      if (currentBodyMetrics && currentBodyMetrics.bmi > 0) {
+        const bmi = currentBodyMetrics.bmi;
+        let suggestedChallengeTitles: string[] = [];
+
+        if (bmi < 18.5) {
+          // Underweight - suggest weight gain challenges
+          suggestedChallengeTitles = [
+            'Strength Training',
+            'Protein-Rich Meal',
+            'Calorie Tracking'
+          ];
+        } else if (bmi >= 25) {
+          // Overweight/Obese - suggest weight loss challenges
+          suggestedChallengeTitles = [
+            '30-Minute Cardio',
+            'Portion Control',
+            '10K Steps',
+            'Skip Sugary Drinks',
+            'Meal Planning'
+          ];
+        }
+
+        // Filter and set BMI-suggested challenges
+        const bmiChallenges = formattedChallenges.filter(c => 
+          suggestedChallengeTitles.includes(c.title)
+        );
+        setBmiSuggestedChallenges(bmiChallenges);
+
+        // Set regular challenges (exclude BMI-suggested ones, or show all if BMI is healthy)
+        if (bmi >= 18.5 && bmi < 25) {
+          // Healthy BMI - show regular challenges
+          setChallenges(formattedChallenges.slice(0, 5));
+        } else {
+          // Unhealthy BMI - show regular challenges excluding BMI-suggested ones
+          const regularChallenges = formattedChallenges.filter(c => 
+            !suggestedChallengeTitles.includes(c.title)
+          );
+          setChallenges(regularChallenges.slice(0, 5));
+        }
+      } else {
+        // No BMI data - show regular challenges
+        setChallenges(formattedChallenges.slice(0, 5));
+      }
     } catch (error: any) {
       console.error("Error loading challenges:", error);
     } finally {
@@ -332,22 +440,78 @@ const Dashboard = () => {
           <ProgressBar current={levelProgress} max={1000} label={`Level ${currentLevel} Progress`} />
         </Card>
 
+        {/* BMI Alert and Suggested Tasks */}
+        {bodyMetrics !== undefined && bodyMetrics !== null && bodyMetrics.bmi > 0 && (
+          <div className="mb-8">
+            {bodyMetrics.bmi < 18.5 ? (
+              <Alert className="mb-4 border-amber-500 bg-amber-50 dark:bg-amber-950">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800 dark:text-amber-200">Underweight BMI Detected</AlertTitle>
+                <AlertDescription className="text-amber-700 dark:text-amber-300">
+                  Your BMI is {bodyMetrics.bmi.toFixed(1)} (underweight). Consider these tasks to help you gain healthy weight:
+                </AlertDescription>
+              </Alert>
+            ) : bodyMetrics.bmi >= 30 ? (
+              <Alert className="mb-4 border-red-500 bg-red-50 dark:bg-red-950">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertTitle className="text-red-800 dark:text-red-200">High BMI Detected</AlertTitle>
+                <AlertDescription className="text-red-700 dark:text-red-300">
+                  Your BMI is {bodyMetrics.bmi.toFixed(1)} (obese). Consider these tasks to help you lose weight:
+                </AlertDescription>
+              </Alert>
+            ) : bodyMetrics.bmi >= 25 ? (
+              <Alert className="mb-4 border-orange-500 bg-orange-50 dark:bg-orange-950">
+                <AlertCircle className="h-4 w-4 text-orange-600" />
+                <AlertTitle className="text-orange-800 dark:text-orange-200">Overweight BMI Detected</AlertTitle>
+                <AlertDescription className="text-orange-700 dark:text-orange-300">
+                  Your BMI is {bodyMetrics.bmi.toFixed(1)} (overweight). Consider these tasks to help you reach a healthy weight:
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {bmiSuggestedChallenges.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
+                  <Scale className="h-6 w-6 text-primary" />
+                  Recommended Tasks for You
+                </h2>
+                <div className="space-y-4">
+                  {bmiSuggestedChallenges.map((challenge) => (
+                    <ChallengeCard
+                      key={challenge.id}
+                      {...challenge}
+                      onStart={() => handleStartChallenge(challenge.id)}
+                      onComplete={() => handleCompleteChallenge(challenge.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Today's Challenges */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
             <Target className="h-6 w-6 text-primary" />
             Today's Challenges
           </h2>
-          <div className="space-y-4">
-            {challenges.map((challenge) => (
-              <ChallengeCard
-                key={challenge.id}
-                {...challenge}
-                onStart={() => handleStartChallenge(challenge.id)}
-                onComplete={() => handleCompleteChallenge(challenge.id)}
-              />
-            ))}
-          </div>
+          {challenges.length === 0 ? (
+            <Card className="p-6 text-center text-muted-foreground">
+              No challenges available at the moment.
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {challenges.map((challenge) => (
+                <ChallengeCard
+                  key={challenge.id}
+                  {...challenge}
+                  onStart={() => handleStartChallenge(challenge.id)}
+                  onComplete={() => handleCompleteChallenge(challenge.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
       </div>

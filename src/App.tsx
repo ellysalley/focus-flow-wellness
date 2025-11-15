@@ -9,6 +9,7 @@ import Companion from "./pages/Companion";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import BodyMetrics from "./pages/BodyMetrics";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/rewards" element={<Rewards />} />
           <Route path="/companion" element={<Companion />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/body-metrics" element={<BodyMetrics />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
