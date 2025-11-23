@@ -71,6 +71,33 @@ export type Database = {
         }
         Relationships: []
       }
+      screen_time: {
+        Row: {
+          id: string
+          user_id: string
+          minutes: number
+          date: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          minutes: number
+          date?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          minutes?: number
+          date?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       challenges: {
         Row: {
           created_at: string

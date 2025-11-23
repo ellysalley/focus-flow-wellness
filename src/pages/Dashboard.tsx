@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Flame, Sparkles, Trophy, Target, Clock, Brain, Droplet, Apple, LucideIcon } from "lucide-react";
+import { Flame, Sparkles, Trophy, Target, Clock, Brain, Droplet, Apple, Monitor, AlertCircle, LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import StatCard from "@/components/StatCard";
 import ProgressBar from "@/components/ProgressBar";
 import ChallengeCard from "@/components/ChallengeCard";
@@ -50,6 +51,8 @@ const Dashboard = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [activeRewards, setActiveRewards] = useState<any[]>([]);
   const [xpMultiplier, setXpMultiplier] = useState(1);
+  const [screenTime, setScreenTime] = useState<number | null | undefined>(undefined);
+  const [screenTimeChallenges, setScreenTimeChallenges] = useState<Challenge[]>([]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -58,7 +61,7 @@ const Dashboard = () => {
         navigate("/auth");
       } else {
         await Promise.all([
-          loadChallenges(user.id),
+          loadScreenTime(user.id),
           loadEarnedBadges(user.id),
           loadActiveRewards(user.id),
         ]);
@@ -66,6 +69,44 @@ const Dashboard = () => {
     };
     checkAuth();
   }, [navigate]);
+
+  // Load challenges after screen time is loaded
+  useEffect(() => {
+    const loadChallengesWithScreenTime = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && screenTime !== undefined) {
+        await loadChallenges(user.id);
+      }
+    };
+    if (screenTime !== undefined) {
+      loadChallengesWithScreenTime();
+    }
+  }, [screenTime]);
+
+  const loadScreenTime = async (userId: string) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from("screen_time")
+        .select("minutes")
+        .eq("user_id", userId)
+        .eq("date", today)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        throw error;
+      }
+
+      if (data) {
+        setScreenTime(data.minutes);
+      } else {
+        setScreenTime(null);
+      }
+    } catch (error: any) {
+      console.error("Error loading screen time:", error);
+      setScreenTime(null);
+    }
+  };
 
   const loadActiveRewards = async (userId: string) => {
     try {
@@ -91,12 +132,11 @@ const Dashboard = () => {
 
   const loadChallenges = async (userId: string) => {
     try {
-      // Load available challenges
+      // Load all available challenges
       const { data: challengesData, error: challengesError } = await supabase
         .from("challenges")
         .select("*")
-        .eq("is_active", true)
-        .limit(5);
+        .eq("is_active", true);
 
       if (challengesError) throw challengesError;
 
@@ -124,7 +164,49 @@ const Dashboard = () => {
         started: false,
       }));
 
-      setChallenges(formattedChallenges);
+      // Get current screen time if not in state
+      let currentScreenTime = screenTime;
+      if (currentScreenTime === undefined) {
+        const today = new Date().toISOString().split('T')[0];
+        const { data: screenTimeData } = await supabase
+          .from("screen_time")
+          .select("minutes")
+          .eq("user_id", userId)
+          .eq("date", today)
+          .single();
+        
+        if (screenTimeData) {
+          currentScreenTime = screenTimeData.minutes;
+        } else {
+          currentScreenTime = null;
+        }
+      }
+
+      // If screen time > 3 hours (180 minutes), suggest alternative tasks
+      if (currentScreenTime !== null && currentScreenTime !== undefined && currentScreenTime > 180) {
+        // Challenges that are good alternatives to screen time
+        const alternativeChallengeTitles = [
+          'Morning Walk',
+          'Mindful Moment',
+          'Digital Detox Hour',
+          'Healthy Meal Prep',
+        ];
+
+        const alternativeChallenges = formattedChallenges.filter(c => 
+          alternativeChallengeTitles.includes(c.title)
+        );
+        setScreenTimeChallenges(alternativeChallenges);
+
+        // Show regular challenges excluding the alternative ones
+        const regularChallenges = formattedChallenges.filter(c => 
+          !alternativeChallengeTitles.includes(c.title)
+        );
+        setChallenges(regularChallenges.slice(0, 5));
+      } else {
+        // Normal screen time - show regular challenges
+        setChallenges(formattedChallenges.slice(0, 5));
+        setScreenTimeChallenges([]);
+      }
     } catch (error: any) {
       console.error("Error loading challenges:", error);
     } finally {
@@ -326,6 +408,61 @@ const Dashboard = () => {
           <StatCard icon={Sparkles} value={todayXp.toString()} label="Today's XP" iconColor="text-accent" />
           <StatCard icon={Trophy} value={earnedBadges.length.toString()} label="Achievements" iconColor="text-amber-500" />
         </div>
+
+        {/* Screen Time Display */}
+        {screenTime !== null && (
+          <Card className="p-6 mb-8 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-full bg-blue-500/10">
+                  <Monitor className="h-6 w-6 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Today's Screen Time</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {Math.floor(screenTime / 60) > 0 && `${Math.floor(screenTime / 60)} hour${Math.floor(screenTime / 60) !== 1 ? 's' : ''}`}
+                    {Math.floor(screenTime / 60) > 0 && screenTime % 60 > 0 && ', '}
+                    {screenTime % 60 > 0 && `${screenTime % 60} minute${screenTime % 60 !== 1 ? 's' : ''}`}
+                    {screenTime === 0 && '0 minutes'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Screen Time Alert and Suggested Tasks */}
+        {screenTime !== null && screenTime > 180 && (
+          <div className="mb-8">
+            <Alert className="mb-4 border-orange-500 bg-orange-50 dark:bg-orange-950">
+              <AlertCircle className="h-4 w-4 text-orange-600" />
+              <AlertTitle className="text-orange-800 dark:text-orange-200">High Screen Time Detected</AlertTitle>
+              <AlertDescription className="text-orange-700 dark:text-orange-300">
+                You've spent {Math.floor(screenTime / 60)} hour{Math.floor(screenTime / 60) !== 1 ? 's' : ''} and {screenTime % 60} minute{screenTime % 60 !== 1 ? 's' : ''} on screens today. 
+                Consider these alternative activities instead:
+              </AlertDescription>
+            </Alert>
+
+            {screenTimeChallenges.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
+                  <Monitor className="h-6 w-6 text-primary" />
+                  Alternative Activities
+                </h2>
+                <div className="space-y-4">
+                  {screenTimeChallenges.map((challenge) => (
+                    <ChallengeCard
+                      key={challenge.id}
+                      {...challenge}
+                      onStart={() => handleStartChallenge(challenge.id)}
+                      onComplete={() => handleCompleteChallenge(challenge.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Progress Section */}
         <Card className="p-6 mb-8 shadow-sm">
