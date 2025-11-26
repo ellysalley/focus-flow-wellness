@@ -165,7 +165,6 @@ const Companion = () => {
     setInputValue("");
     await saveMessage(inputValue, "user");
 
-    // Pass the updated messages array to ensure we have the latest state
     sendMessageToAI(userMessage, updatedMessages);
   };
 
@@ -201,7 +200,6 @@ const Companion = () => {
   return (
     <div className="min-h-screen bg-background pb-28">
       <div className="container max-w-4xl mx-auto px-4 py-8 h-[calc(100vh-7rem)] flex flex-col">
-        {/* Header */}
         <div className="mb-6 flex justify-between items-start">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
@@ -224,7 +222,6 @@ const Companion = () => {
           )}
         </div>
 
-        {/* Daily Check-in Card */}
         {!conversationStarted && (
           <Card className="p-6 mb-6 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950 border-primary/20 shadow-md">
             <div className="flex items-start gap-4">
@@ -251,7 +248,6 @@ const Companion = () => {
           </Card>
         )}
 
-        {/* Chat Messages */}
         {conversationStarted && (
           <Card className="flex-1 p-6 mb-4 overflow-y-auto shadow-sm">
             <div className="space-y-4">
@@ -302,7 +298,6 @@ const Companion = () => {
           </Card>
         )}
 
-        {/* Input Area */}
         {conversationStarted && (
           <div className="flex gap-2">
             <Input
