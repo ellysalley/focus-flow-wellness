@@ -70,7 +70,6 @@ const Dashboard = () => {
     checkAuth();
   }, [navigate]);
 
-  // Load challenges after screen time is loaded
   useEffect(() => {
     const loadChallengesWithScreenTime = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -119,7 +118,6 @@ const Dashboard = () => {
 
       if (data) {
         setActiveRewards(data);
-        // Check for XP boost
         const xpBoost = data.find(r => r.reward_type === 'xp_boost');
         if (xpBoost) {
           setXpMultiplier(2);
@@ -132,7 +130,6 @@ const Dashboard = () => {
 
   const loadChallenges = async (userId: string) => {
     try {
-      // Load all available challenges
       const { data: challengesData, error: challengesError } = await supabase
         .from("challenges")
         .select("*")
@@ -140,7 +137,6 @@ const Dashboard = () => {
 
       if (challengesError) throw challengesError;
 
-      // Load completed challenges for today
       const today = new Date().toISOString().split('T')[0];
       const { data: completedData, error: completedError } = await supabase
         .from("completed_challenges")
@@ -164,7 +160,6 @@ const Dashboard = () => {
         started: false,
       }));
 
-      // Get current screen time if not in state
       let currentScreenTime = screenTime;
       if (currentScreenTime === undefined) {
         const today = new Date().toISOString().split('T')[0];
@@ -182,9 +177,7 @@ const Dashboard = () => {
         }
       }
 
-      // If screen time > 3 hours (180 minutes), suggest alternative tasks
       if (currentScreenTime !== null && currentScreenTime !== undefined && currentScreenTime > 180) {
-        // Challenges that are good alternatives to screen time
         const alternativeChallengeTitles = [
           'Morning Walk',
           'Mindful Moment',
@@ -197,13 +190,11 @@ const Dashboard = () => {
         );
         setScreenTimeChallenges(alternativeChallenges);
 
-        // Show regular challenges excluding the alternative ones
         const regularChallenges = formattedChallenges.filter(c => 
           !alternativeChallengeTitles.includes(c.title)
         );
         setChallenges(regularChallenges.slice(0, 5));
       } else {
-        // Normal screen time - show regular challenges
         setChallenges(formattedChallenges.slice(0, 5));
         setScreenTimeChallenges([]);
       }
@@ -272,16 +263,14 @@ const Dashboard = () => {
 
     if (challenge) {
       const xpEarned = challenge.xp * xpMultiplier;
-      const pointsEarned = xpEarned; // 1:1 ratio with XP
+      const pointsEarned = xpEarned;
 
       setTodayXp(prev => prev + xpEarned);
 
       const leveledUp = await addXP(xpEarned);
 
-      // Award points along with XP
       await addPoints(pointsEarned);
 
-      // Save to database
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -291,7 +280,6 @@ const Dashboard = () => {
             xp_earned: challenge.xp,
           });
 
-          // Check for new badge achievements
           await checkBadgeAchievements(user.id);
         }
       } catch (error) {
@@ -323,14 +311,12 @@ const Dashboard = () => {
     if (!progress) return;
 
     try {
-      // Get all badges
       const { data: allBadges } = await supabase
         .from("badges")
         .select("*");
 
       if (!allBadges) return;
 
-      // Get user's earned badges
       const { data: earnedBadgesData } = await supabase
         .from("user_badges")
         .select("badge_id")
@@ -338,7 +324,6 @@ const Dashboard = () => {
 
       const earnedBadgeIds = new Set(earnedBadgesData?.map(b => b.badge_id) || []);
 
-      // Check each badge requirement
       for (const badge of allBadges) {
         if (earnedBadgeIds.has(badge.id)) continue;
 
@@ -369,7 +354,6 @@ const Dashboard = () => {
             description: `You earned: ${badge.title}`,
           });
 
-          // Reload badges
           await loadEarnedBadges(userId);
         }
       }
@@ -388,7 +372,6 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background pb-28">
       <div className="container max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
@@ -402,14 +385,12 @@ const Dashboard = () => {
           </Badge>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <StatCard icon={Flame} value={`${progress.current_streak} days`} label="Daily Streak" iconColor="text-orange-500" />
           <StatCard icon={Sparkles} value={todayXp.toString()} label="Today's XP" iconColor="text-accent" />
           <StatCard icon={Trophy} value={earnedBadges.length.toString()} label="Achievements" iconColor="text-amber-500" />
         </div>
 
-        {/* Screen Time Display */}
         {screenTime !== null && (
           <Card className="p-6 mb-8 shadow-sm">
             <div className="flex items-center justify-between">
@@ -431,7 +412,6 @@ const Dashboard = () => {
           </Card>
         )}
 
-        {/* Screen Time Alert and Suggested Tasks */}
         {screenTime !== null && screenTime > 180 && (
           <div className="mb-8">
             <Alert className="mb-4 border-orange-500 bg-orange-50 dark:bg-orange-950">
@@ -464,12 +444,10 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Progress Section */}
         <Card className="p-6 mb-8 shadow-sm">
           <ProgressBar current={levelProgress} max={1000} label={`Level ${currentLevel} Progress`} />
         </Card>
 
-        {/* Today's Challenges */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
             <Target className="h-6 w-6 text-primary" />

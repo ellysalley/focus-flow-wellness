@@ -31,7 +31,6 @@ export const useUserProgress = () => {
       }
 
       if (!data) {
-        // Create initial progress - start at 0
         const { data: newProgress, error: insertError } = await supabase
           .from("user_progress")
           .insert({
@@ -48,7 +47,6 @@ export const useUserProgress = () => {
         if (insertError) throw insertError;
         setProgress(newProgress);
       } else {
-        // Update streak based on last activity
         const today = new Date().toISOString().split('T')[0];
         const lastActivity = data.last_activity_date;
         
@@ -60,7 +58,7 @@ export const useUserProgress = () => {
           const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
           
           if (diffDays > 1) {
-            updatedStreak = 0; // Reset streak if missed a day
+            updatedStreak = 0;
           }
         }
         
@@ -123,13 +121,11 @@ export const useUserProgress = () => {
     const newLevel = Math.floor(newTotalXP / 1000);
     const leveledUp = newLevel > oldLevel;
 
-    // Only increment streak if it's a new day
     const today = new Date().toISOString().split('T')[0];
     const lastActivity = progress.last_activity_date;
     let newStreak = progress.current_streak;
 
     if (lastActivity !== today) {
-      // Check if it's consecutive day
       if (lastActivity) {
         const lastDate = new Date(lastActivity);
         const todayDate = new Date(today);
@@ -137,18 +133,14 @@ export const useUserProgress = () => {
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
         if (diffDays === 1) {
-          // Consecutive day, increment streak
           newStreak = progress.current_streak + 1;
         } else if (diffDays > 1) {
-          // Missed days, reset to 1
           newStreak = 1;
         }
       } else {
-        // First activity
         newStreak = 1;
       }
     }
-    // If same day, keep current streak
 
     await updateProgress({
       total_xp: newTotalXP,

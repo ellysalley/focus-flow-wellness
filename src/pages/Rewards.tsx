@@ -162,7 +162,6 @@ const Rewards = () => {
         .select();
 
       if (insertRedeemedError) {
-        // If conflict (409), it means already redeemed - just update local state
         if (insertRedeemedError.code === '23505') {
           setRedeemedRewards([...redeemedRewards, id]);
           return;
@@ -170,7 +169,6 @@ const Rewards = () => {
         throw insertRedeemedError;
       }
 
-      // Activate the reward so it has actual effects
       const { data: insertedActive, error: insertActiveError } = await supabase
         .from("active_rewards")
         .insert({
@@ -181,7 +179,6 @@ const Rewards = () => {
         .select();
 
       if (insertActiveError) {
-        // If conflict, reward is already active - ignore error
         if (insertActiveError.code !== '23505') {
           throw insertActiveError;
         }
@@ -190,11 +187,9 @@ const Rewards = () => {
       await deductPoints(cost);
       setRedeemedRewards([...redeemedRewards, id]);
       
-      // Show what they actually got
       let rewardDescription = "";
       switch (rewardType) {
         case "custom_theme":
-          // Toggle between light and dark mode
           const newTheme = theme === "dark" ? "light" : "dark";
           setTheme(newTheme);
           rewardDescription = `Theme switched to ${newTheme} mode! You can toggle anytime by redeeming again.`;
@@ -232,7 +227,6 @@ const Rewards = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // First, check what exists in the database
       const { data: existingRedeemed } = await supabase
         .from("redeemed_rewards")
         .select("*")
@@ -255,7 +249,6 @@ const Rewards = () => {
         return;
       }
 
-      // Delete from redeemed_rewards table using the ID from the existing record
       const { error: redeemedError } = await supabase
         .from("redeemed_rewards")
         .delete()
@@ -263,7 +256,6 @@ const Rewards = () => {
 
       if (redeemedError) throw redeemedError;
 
-      // Delete from active_rewards table using IDs
       if (existingActive && existingActive.length > 0) {
         const { error: activeError } = await supabase
           .from("active_rewards")
@@ -273,13 +265,10 @@ const Rewards = () => {
         if (activeError) throw activeError;
       }
 
-      // Return points to user
       await addPoints(cost);
 
-      // Update local state to remove from redeemedRewards
       setRedeemedRewards(redeemedRewards.filter(rewardId => rewardId !== id));
 
-      // Refetch redeemed rewards to ensure state is in sync
       await fetchRedeemedRewards(user.id);
 
       toast({
@@ -302,7 +291,6 @@ const Rewards = () => {
   return (
     <div className="min-h-screen bg-background pb-28">
       <div className="container max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
             Your Rewards
@@ -310,7 +298,6 @@ const Rewards = () => {
           <p className="text-muted-foreground">Track your progress and redeem exciting rewards</p>
         </div>
 
-        {/* Points Overview */}
         <Card className="p-6 mb-8 shadow-md bg-gradient-to-r from-primary to-secondary text-primary-foreground">
           <div className="flex justify-between items-center">
             <div>
@@ -326,7 +313,6 @@ const Rewards = () => {
           </div>
         </Card>
 
-        {/* Achievement Badges */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
             <Trophy className="h-6 w-6 text-amber-500" />
@@ -368,7 +354,6 @@ const Rewards = () => {
           </div>
         </div>
 
-        {/* Redeemable Rewards */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
             <Gift className="h-6 w-6 text-primary" />

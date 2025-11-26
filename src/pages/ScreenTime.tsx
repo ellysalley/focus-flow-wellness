@@ -84,7 +84,6 @@ const ScreenTime = () => {
       const today = new Date().toISOString().split('T')[0];
 
       if (existingScreenTime) {
-        // Update existing record
         const { error } = await supabase
           .from("screen_time")
           .update({
@@ -95,7 +94,6 @@ const ScreenTime = () => {
 
         if (error) throw error;
       } else {
-        // Insert new record
         const { error } = await supabase
           .from("screen_time")
           .insert({
@@ -133,7 +131,6 @@ const ScreenTime = () => {
   return (
     <div className="min-h-screen bg-background pb-28">
       <div className="container max-w-2xl mx-auto px-4 py-8">
-        {/* Header */}
         <div className="mb-8">
           <Button
             variant="ghost"
@@ -151,7 +148,6 @@ const ScreenTime = () => {
           </p>
         </div>
 
-        {/* Form Card */}
         <Card className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
@@ -186,7 +182,6 @@ const ScreenTime = () => {
           </form>
         </Card>
 
-        {/* Info Card */}
         <Card className="p-6 mt-6 bg-muted/50">
           <div className="flex items-start gap-3">
             <Clock className="h-5 w-5 text-primary mt-0.5" />
@@ -210,4 +205,5 @@ const ScreenTime = () => {
 };
 
 export default ScreenTime;
+
 

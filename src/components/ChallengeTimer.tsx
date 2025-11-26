@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Pause, RotateCcw } from "lucide-react";
 
 interface ChallengeTimerProps {
-  duration: string; // e.g., "5 min", "10 min"
+  duration: string;
   onComplete: () => void;
   isStarted: boolean;
 }
@@ -37,7 +37,6 @@ const ChallengeTimer = ({ duration, onComplete, isStarted }: ChallengeTimerProps
         intervalRef.current = null;
       }
     } else {
-      // Auto-start timer when challenge is started
       setIsRunning(true);
     }
   }, [isStarted, totalSeconds]);
@@ -69,7 +68,6 @@ const ChallengeTimer = ({ duration, onComplete, isStarted }: ChallengeTimerProps
 
   useEffect(() => {
     if (remainingSeconds === 0 && totalSeconds > 0 && isStarted) {
-      // Timer completed - auto complete the challenge
       setTimeout(() => {
         onComplete();
       }, 500);

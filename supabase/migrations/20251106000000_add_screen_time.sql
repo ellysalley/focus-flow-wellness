@@ -32,3 +32,4 @@ WITH CHECK (auth.uid() = user_id);
 -- Create index for better performance
 CREATE INDEX idx_screen_time_user_id_date ON public.screen_time(user_id, date DESC);
 
+
